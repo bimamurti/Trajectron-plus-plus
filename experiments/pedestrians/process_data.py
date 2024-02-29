@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import dill
 
+#sys.path.append("/home/bimamurti/Documents/python scripts/Trajectron-plus-plus/trajectron/")
 sys.path.append("../../trajectron")
 from environment import Environment, Scene, Node
 from utils import maybe_makedirs
@@ -14,7 +15,8 @@ pred_indices = [2, 3]
 state_dim = 6
 frame_diff = 10
 desired_frame_diff = 1
-dt = 0.4
+dt = 0.04
+#dt=0.4
 
 standardization = {
     'PEDESTRIAN': {
@@ -81,8 +83,10 @@ def augment(scene):
 nl = 0
 l = 0
 maybe_makedirs('../processed')
+#maybe_makedirs('/home/bimamurti/Documents/python scripts/Trajectron-plus-plus/experiments/pedestrians/processed')
 data_columns = pd.MultiIndex.from_product([['position', 'velocity', 'acceleration'], ['x', 'y']])
-for desired_source in ['eth', 'hotel', 'univ', 'zara1', 'zara2']:
+#for desired_source in ['eth', 'hotel', 'univ', 'zara1', 'zara2']:
+for desired_source in ['mot21']:
     for data_class in ['train', 'val', 'test']:
         env = Environment(node_type_list=['PEDESTRIAN'], standardization=standardization)
         attention_radius = dict()
@@ -90,11 +94,12 @@ for desired_source in ['eth', 'hotel', 'univ', 'zara1', 'zara2']:
         env.attention_radius = attention_radius
 
         scenes = []
+        #data_dict_path = os.path.join('/home/bimamurti/Documents/python scripts/Trajectron-plus-plus/experiments/pedestrians/processed', '_'.join([desired_source, data_class]) + '.pkl')
         data_dict_path = os.path.join('../processed', '_'.join([desired_source, data_class]) + '.pkl')
-
+        
         for subdir, dirs, files in os.walk(os.path.join('raw', desired_source, data_class)):
             for file in files:
-                if file.endswith('.txt'):
+                if file.endswith('.csv'):
                     input_data_dict = dict()
                     full_data_path = os.path.join(subdir, file)
                     print('At', full_data_path)
@@ -104,8 +109,8 @@ for desired_source in ['eth', 'hotel', 'univ', 'zara1', 'zara2']:
                     data['frame_id'] = pd.to_numeric(data['frame_id'], downcast='integer')
                     data['track_id'] = pd.to_numeric(data['track_id'], downcast='integer')
 
-                    data['frame_id'] = data['frame_id'] // 10
-
+                    #data['frame_id'] = data['frame_id'] // 10
+                    data['frame_id'] = data['frame_id']
                     data['frame_id'] -= data['frame_id'].min()
 
                     data['node_type'] = 'PEDESTRIAN'
@@ -123,6 +128,9 @@ for desired_source in ['eth', 'hotel', 'univ', 'zara1', 'zara2']:
                     for node_id in pd.unique(data['node_id']):
 
                         node_df = data[data['node_id'] == node_id]
+                        #print(np.diff(node_df['frame_id']))
+                        #print(node_df['frame_id'])
+                        #print(node_df)
                         assert np.all(np.diff(node_df['frame_id']) == 1)
 
                         node_values = node_df[['pos_x', 'pos_y']].values
@@ -162,7 +170,7 @@ for desired_source in ['eth', 'hotel', 'univ', 'zara1', 'zara2']:
         print(f'Processed {len(scenes):.2f} scene for data class {data_class}')
 
         env.scenes = scenes
-
+        print(data_dict_path)
         if len(scenes) > 0:
             with open(data_dict_path, 'wb') as f:
                 dill.dump(env, f, protocol=dill.HIGHEST_PROTOCOL)
